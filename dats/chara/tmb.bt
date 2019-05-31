@@ -13,28 +13,74 @@ typedef int64 int64_t;
 struct TMLB
 {
   int32_t magic;
-  int8_t gap4[4];
-  int8_t entryCount;
-  int8_t gap6[3];
+  uint32_t size;
+  uint32_t entryCount;
+} tmlb <bgcolor=cLtGreen>;
 
-  //struct TMDH
-  //{
-  //  int32_t magic;
-  //  int32_t nextSectionOffset;
-  //
-  //  int32_t unk[2];
-  //} tmdh;
-  
-} tmlb;
-
-//FSeek( pos + tmlb.tmdh.nextSectionOffset );
-
-// this is only valid for TM* types by the looks of the game code but it keeps going fine
-// see 140FD7C50 
 local int count = tmlb.entryCount;
 local int pos = 0;
 local string type;
-while( count-- )
+
+// avfx
+void readFloatPairShit(int offset, int count, int i)
+{
+  local int j;
+  for(j = 0; j < count; j++)
+  {
+    Printf("  - pair %i entry %i, val: %f\n", i, j, ReadFloat(offset + (j * 4)));
+  }
+}
+
+void parseAvfx()
+{
+  struct AVFXEntry
+  {
+    uint32_t unk[3] ;
+    uint32_t pathOffset <bgcolor=cLtGreen>;
+    uint32_t unk2[2];
+    struct SomePairShittery
+    {
+      uint32_t offset;
+      uint32_t count;
+    } pairs[5] <bgcolor=cLtGreen>;
+  } entry;
+
+  // all this garbage begins from the avfx entry offset, not the header
+  Printf(" avfx: %s\n", ReadString(pos + 8 + entry.pathOffset));
+
+  Printf(" pairs shit:\n");
+  local int i = 0;
+  for(i = 0; i < 5; i++)
+  {
+    readFloatPairShit(pos + 8 + entry.pairs[i].offset, entry.pairs[i].count, i);
+  }
+}
+
+void FUCKSE(int base, int size)
+{
+  Printf(" - @ %x, len: %x\n", base, size);
+  local int i;
+  local int d;
+  for(i = base; i < base + size; i += 4)
+  {
+    d = ReadInt(i);
+    Printf("   - offset: %x, data: %x, str: %s\n", i, d, ReadString(base + d));
+  }
+}
+
+void parseAnim()
+{
+  struct AnimEntry
+  {
+    uint32_t unk[6];
+    uint32_t animNameOffset <bgcolor=cLtGreen>;
+    uint32_t unk2;
+  } entry;
+  
+  Printf(" anim: %s\n", ReadString(pos + 8 + entry.animNameOffset));
+}
+
+while(count--)
 {
   pos = FTell();
   type = ReadString(pos, 4);
@@ -44,37 +90,36 @@ while( count-- )
   struct EntryHeader
   {
     char type[4];
-    int32_t nextSectionOffset;
-    int16_t id;
-  };
-
-  struct TMDH
-  {
-    EntryHeader header;
-    uint32_t unk[2];
-  };
-
-  struct TMTR
-  {
-    EntryHeader header;
-    uint32_t unk[3];
-  };
+    int32_t entrySize;
+  } header <bgcolor=cLtGreen>;
   
-  if( type == "TMDH" )
+  if(type == "TMDH")
   {
-    TMDH entry <bgcolor=cLtGreen>;
-  }
-  else if( type == "TMTR" )
-  {
-    TMTR entry <bgcolor=cLtGreen>;
-  }
-  else
-  {
-    struct NullEntry
+    struct TMDH
     {
-      EntryHeader header;
-    } entry <bgcolor=cLtRed>;
+      uint16_t id;
+      uint16_t unk;
+      uint32_t unk2[2];
+    } entry;
   }
+  else if(type == "TMTR")
+  {
+    struct TMTR
+    {
+      uint16_t id;
+      uint16_t unk;
+      uint32_t unk2[3];
+    } entry;
+  }
+  else if(type == "C012")
+  {
+    parseAvfx();
+  }
+  else if(type == "C010")
+  {
+    parseAnim();
+  }
+  //else FUCKSE(pos + 8, header.entrySize - 8);
 
-  FSeek( pos + entry.header.nextSectionOffset );
+  FSeek(pos + header.entrySize);
 }
