@@ -1,0 +1,175 @@
+typedef ubyte uint8_t;
+typedef byte int8_t;
+
+typedef ushort uint16_t;
+typedef short int16_t;
+
+typedef uint uint32_t;
+typedef int int32_t;
+
+typedef uint64 uint64_t;
+typedef int64 int64_t;
+
+enum LgbEntryType
+{
+  BgParts = 1,
+  Light = 3,
+  Vfx = 4,
+  PositionMarker = 5,
+  Gimmick = 6,
+  SharedGroup6 = 6,// secondary variable is set to 2
+  Sound = 7,
+  EventNpc = 8,
+  BattleNpc = 9,
+  Aetheryte = 12,
+  EnvSpace = 13,
+  Gathering = 14,
+  SharedGroup15 = 15,// secondary variable is set to 13
+  Treasure = 16,
+  Weapon = 39,
+  PopRange = 40,
+  ExitRange = 41,
+  MapRange = 43,
+  NaviMeshRange = 44,
+  EventObject = 45,
+  EnvLocation = 47,
+  EventRange = 49,
+  QuestMarker = 51,
+  CollisionBox = 57,
+  DoorRange = 58,
+  LineVfx = 59,
+  ClientPath = 65,
+  ServerPath = 66,
+  GimmickRange = 67,
+  TargetMarker = 68,
+  ChairMarker = 69,
+  ClickableRange = 70,
+  PrefetchRange = 71,
+  FateRange = 72,
+  SphereCastRange = 75,
+};
+
+struct LGB_FILE_HEADER
+{
+  char magic[4]; // LGB 1
+  uint32_t fileSize;
+  uint32_t unknown;
+  char magic2[4]; // LGP1
+  uint32_t unknown2;
+  uint32_t unknown3;
+  uint32_t unknown4;
+  uint32_t unknown5;
+  int32_t groupCount;
+} fileHdr <bgcolor=0x00aa00>;
+
+struct LGB_GROUP_HEADER
+{
+  uint32_t id;
+  int32_t groupNameOffset;
+  int32_t entriesOffset;
+  int32_t entryCount;
+  uint32_t unknown2;
+  uint32_t unknown3;
+  uint32_t unknown4;
+  uint32_t unknown5;
+  uint32_t unknown6;
+  uint32_t unknown7;
+  uint32_t unknown8;
+  uint32_t unknown9;
+  uint32_t unknown10;
+};
+
+struct vec3
+{
+    float x, y, z;
+};
+
+struct LGB_ENTRY_HEADER
+{
+  LgbEntryType type;
+  uint32_t unknown;
+  uint32_t nameOffset;
+  vec3 translation;
+  vec3 rotation;
+  vec3 scale;
+};
+
+struct LGB_BGPARTS_HEADER
+{
+  LGB_ENTRY_HEADER lgbHeader;
+  uint32_t modelFileOffset;
+  uint32_t collisionFileOffset;
+  uint32_t unknown4;
+  uint32_t unknown5;
+  uint32_t unknown6;
+  uint32_t unknown7;
+  uint32_t unknown8;
+  uint32_t unknown9;
+};
+
+struct LGB_GIMMICK_HEADER
+{
+  LGB_ENTRY_HEADER lgbHeader;
+  uint32_t gimmickFileOffset;
+  char unknownBytes[100];
+};
+
+
+void FindGroupEntries(LGB_GROUP_HEADER& group)
+{
+    Printf("group = %d, entries = %d\n", group.id, group.entryCount);
+
+    local int baseOffset = FTell();
+
+    local int i;
+    local int entryOffset;
+    local int curPos = baseOffset;
+    local int type;
+    for(i = 0; i < group.entryCount; i++)
+    {
+        curPos = baseOffset + (i * 4);
+        FSeek(curPos);
+        entryOffset = baseOffset + ReadInt();
+
+        Printf("entry = %d, offset = %x\n", i, entryOffset);
+        
+        FSeek(entryOffset);
+
+        type = ReadInt();
+
+        if(type == 1)
+            LGB_BGPARTS_HEADER entry <bgcolor=0xff0000>;
+        else if(type == 6)
+            LGB_GIMMICK_HEADER entry <bgcolor=0x00ff00>;
+
+        else
+            LGB_ENTRY_HEADER entry <bgcolor=0x0000ff>;
+    }
+}
+
+void FindGroups()
+{
+    local int baseOffset = FTell();
+    local int i;
+    local int groupOffset;
+    local int curPos = baseOffset;
+    for(i = 0; i < fileHdr.groupCount; i++)
+    {
+        curPos = baseOffset + (i * 4);
+        FSeek(curPos);
+        groupOffset = baseOffset + ReadInt();
+    
+        Printf("id = %d, pos = %x, offset = %x\n", i, curPos, groupOffset);
+    
+        FSeek(groupOffset);
+    
+        LGB_GROUP_HEADER group <bgcolor=0x00aaff>;
+
+        FindGroupEntries(group);
+    
+        FSeek(curPos);
+    }
+}
+
+FindGroups();
+

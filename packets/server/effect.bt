@@ -1,0 +1,103 @@
+char header[0x38];
+
+typedef ubyte uint8_t;
+typedef byte int8_t;
+
+typedef ushort uint16_t;
+typedef short int16_t;
+
+typedef uint uint32_t;
+typedef int int32_t;
+
+typedef uint64 uint64_t;
+typedef int64 int64_t;
+
+
+enum <uint8_t> ActionEffectType
+{
+  Nothing = 0,
+  Miss = 1,
+  FullResist = 2,
+  Damage = 3,
+  Heal = 4,
+  BlockedDamage = 5,
+  ParriedDamage = 6,
+  Invulnerable = 7,
+  NoEffectText = 8,
+  Unknown_0 = 9,
+  MpLoss = 10,
+  MpGain = 11,
+  TpLoss = 12,
+  TpGain = 13,
+  GpGain = 14,
+  /*!
+  * @brief Tells the client that it should show combo indicators on actions.
+  *
+  * @param flags Required to be 128, doesn't show combo rings on hotbars otherwise
+  * @param value The actionid that starts/continues the combo. eg, 3617 will start a spinning slash and/or syphon strike combo
+  */
+  StartActionCombo = 28,
+  Knockback = 33,
+  Mount = 38,
+  VFX = 59, // links to VFX sheet
+};
+
+enum <uint8_t> ActionHitSeverityType
+{
+  NormalDamage = 0,
+  CritHeal = 0,
+  CritDamage = 1,
+  NormalHeal = 1,
+  DirectHitDamage = 2,
+  CritDirectHitDamage = 3
+};
+
+enum <uint8_t> ActionEffectDisplayType
+{
+  HideActionName = 0,
+  ShowActionName = 1,
+  ShowItemName = 2,
+};
+
+struct EffectEntry
+{
+  ActionEffectType effectType;
+  ActionHitSeverityType hitSeverity;
+  uint8_t param;
+  int8_t bonusPercent; // shows an additional percentage in the battle log, will not change the damage number sent & shown
+  uint8_t valueMultiplier;      // This multiplies whatever value is in the 'value' param by 10. Possibly a workaround for big numbers
+  uint8_t flags;
+  int16_t value;
+};
+
+struct FFXIVIpcEffect
+{
+  uint64_t animationTargetId; // who the animation targets
+  
+  uint32_t actionId; // what the casting player casts, shown in battle log/ui
+  uint32_t sequence; // seems to only increment on retail?
+  
+  float animationLockTime; // maybe? doesn't seem to do anything
+  uint32_t someTargetId; // always 00 00 00 E0, 0x0E000000 is the internal def for INVALID TARGET ID
+  
+  uint16_t hiddenAnimation; // if 0, always shows animation, otherwise hides it. counts up by 1 for each animation skipped on a caster
+  uint16_t rotation;
+  uint16_t actionAnimationId; // the animation that is played by the casting character
+  uint8_t variation; // variation in the animation
+  ActionEffectDisplayType effectDisplayType;
+  
+  uint8_t unknown20; // is read by handler, runs code which gets the LODWORD of animationLockTime (wtf?)
+  uint8_t effectCount; // ignores effects if 0, otherwise parses all of them
+  uint16_t padding_21;
+  
+  uint16_t padding_22[3];
+  
+  EffectEntry effects[8];
+  
+  uint16_t padding_6A[3];
+  
+  uint32_t effectTargetId; // who the effect targets
+  uint32_t effectFlags; // nonzero = effects do nothing, no battle log, no ui text - only shows animations
+  
+  uint32_t padding_78;
+} ipc;

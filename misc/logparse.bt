@@ -1,0 +1,21 @@
+uint32 contentSize;
+uint32 fileSize;
+
+local uint32 indexSize = fileSize - contentSize;
+
+uint32 contentOffsets[ indexSize ];
+
+local int64 contentStart = FTell();
+local int i;
+for( i = 0; i < indexSize; i++ )
+{
+    FSeek( contentStart + contentOffsets[ i ] );
+
+    struct logEntry
+    {
+        time_t timestamp;
+        uint16 eventType;
+        uint16 shit;
+        string message;
+    } entry;
+}

@@ -1,0 +1,80 @@
+typedef ubyte uint8_t;
+typedef byte int8_t;
+
+typedef ushort uint16_t;
+typedef short int16_t;
+
+typedef uint uint32_t;
+typedef int int32_t;
+
+typedef uint64 uint64_t;
+typedef int64 int64_t;
+
+struct TMLB
+{
+  int32_t magic;
+  int8_t gap4[4];
+  int8_t entryCount;
+  int8_t gap6[3];
+
+  //struct TMDH
+  //{
+  //  int32_t magic;
+  //  int32_t nextSectionOffset;
+  //
+  //  int32_t unk[2];
+  //} tmdh;
+  
+} tmlb;
+
+//FSeek( pos + tmlb.tmdh.nextSectionOffset );
+
+// this is only valid for TM* types by the looks of the game code but it keeps going fine
+// see 140FD7C50 
+local int count = tmlb.entryCount;
+local int pos = 0;
+local string type;
+while( count-- )
+{
+  pos = FTell();
+  type = ReadString(pos, 4);
+
+  Printf("at pos %x, type: %s\n", pos, type);
+
+  struct EntryHeader
+  {
+    char type[4];
+    int32_t nextSectionOffset;
+    int16_t id;
+  };
+
+  struct TMDH
+  {
+    EntryHeader header;
+    uint32_t unk[2];
+  };
+
+  struct TMTR
+  {
+    EntryHeader header;
+    uint32_t unk[3];
+  };
+  
+  if( type == "TMDH" )
+  {
+    TMDH entry <bgcolor=cLtGreen>;
+  }
+  else if( type == "TMTR" )
+  {
+    TMTR entry <bgcolor=cLtGreen>;
+  }
+  else
+  {
+    struct NullEntry
+    {
+      EntryHeader header;
+    } entry <bgcolor=cLtRed>;
+  }
+
+  FSeek( pos + entry.header.nextSectionOffset );
+}
