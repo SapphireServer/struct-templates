@@ -119,6 +119,23 @@ while(count--)
   {
     parseAnim();
   }
+  else if(type == "C006")
+  {
+    struct C006 {
+      uint32_t unk[4];
+    } entry;
+  }
+  else if(type == "C063")
+  {
+    struct SCDEntry {
+      uint32_t unk;
+      uint32_t unk2[2];
+      uint32_t scdPathOffset;
+      uint32_t unk3[2];
+    } entry;
+
+    Printf(" scd: %s\n", ReadString(pos + 8 + entry.scdPathOffset));
+  }
   //else FUCKSE(pos + 8, header.entrySize - 8);
 
   FSeek(pos + header.entrySize);
