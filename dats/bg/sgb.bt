@@ -48,7 +48,7 @@ enum LgbEntryType
   FateRange = 72,
   SphereCastRange = 75,
 
-  Group = 256,
+  Group = 256
 };
 
 struct SE_COMMON_FILE_SUBHEADER
@@ -65,36 +65,41 @@ struct SE_COMMON_FILE_HEADER
     SE_COMMON_FILE_SUBHEADER subHeader;
 }fileHdr <bgcolor=0x00aa00>;;
 
-typedef SE_COMMON_FILE_HEADER SE_COMMON_FILE_HEADER;
+typedef SE_COMMON_FILE_HEADER SGB_FILE_HEADER;
 
-//struct LGB_FILE_HEADER : SE_COMMON_FILE_HEADER
-//{
-//
-//} fileHdr <bgcolor=0x00aa00>;
-
-struct LGB_ROOT_ENTRY
+struct SGB_ROOT_ENTRY
 {
-   LgbEntryType type;
-   uint32_t nameOffset;
-   uint32_t entriesOffset;
-   uint32_t entryCount;
-} rootNode <bgcolor=0x00ffff>;
+  uint32_t dataOffset;
+  uint32_t groupCount;
+  uint32_t groupOffset;
+  uint32_t unknowns[8];
 
-struct LGB_GROUP_HEADER
+} rootEntry <bgcolor=0x00ffff>;
+
+struct SGB_GROUP_HEADER
 {
-  uint32_t id;
-  int32_t groupNameOffset;
-  int32_t entriesOffset;
+  LgbEntryType type;
+  int32_t nameOffset;
+  uint32_t unknown08;
+  uint32_t unknown0C;
+
+  uint32_t unknown10;
+  uint32_t unknown14;
+  uint32_t unknown18;
+  uint32_t unknown1C;
+
   int32_t entryCount;
-  uint32_t unknown2;
-  uint32_t unknown3;
-  uint32_t festivalId;
-  uint32_t unknown5;
-  uint32_t unknown6;
-  uint32_t obsetGroupOffset;
-  uint32_t obsetGroupEntryCount;
-  uint32_t unknownGroupOffset;
-  uint32_t unknownGroupEntryCount;
+  uint32_t unknown24;
+  uint32_t unknown28;
+  uint32_t unknown2C;
+
+  uint32_t unknown30;
+  uint32_t unknown34;
+  uint32_t unknown38;
+  uint32_t unknown3C;
+
+  uint32_t unknown40;
+  uint32_t unknown44;
 };
 
 struct vec3
@@ -102,7 +107,7 @@ struct vec3
     float x, y, z;
 };
 
-struct LGB_ENTRY_HEADER
+struct SGB_ENTRY_HEADER
 {
   LgbEntryType type;
   uint32_t unknown;
@@ -112,9 +117,9 @@ struct LGB_ENTRY_HEADER
   vec3 scale;
 };
 
-struct LGB_BGPARTS_HEADER
+struct SGB_BGPARTS_HEADER
 {
-  LGB_ENTRY_HEADER lgbHeader;
+  SGB_ENTRY_HEADER lgbHeader;
   uint32_t modelFileOffset;
   uint32_t collisionFileOffset;
   uint32_t unknown4;
@@ -128,9 +133,9 @@ struct LGB_BGPARTS_HEADER
   float unknown12; 
 };
 
-struct LGB_GIMMICK_HEADER
+struct SGB_GIMMICK_HEADER
 {
-  LGB_ENTRY_HEADER lgbHeader;
+  SGB_ENTRY_HEADER lgbHeader;
   uint32_t gimmickFileOffset;
   uint32_t unknown4;
   uint32_t someEntryOffset;
@@ -145,14 +150,14 @@ struct LGB_GIMMICK_HEADER
   //uint32_t entryOffsets[someEntryCount2];
 };
 
-struct LGB_GIMMICK_SUBENTRY
+struct SGB_GIMMICK_SUBENTRY
 {
    uint32_t someType; // or id?
    uint32_t unknown;
    uint32_t unknown;
 };
 
-struct LGB_OBSET_ENTRY
+struct SGB_OBSET_ENTRY
 {
   LgbEntryType type;
   uint32_t id;
@@ -160,14 +165,14 @@ struct LGB_OBSET_ENTRY
 };
 
 
-struct LGB_GROUP_SUBENTRY2
+struct SGB_GROUP_SUBENTRY2
 {
   LgbEntryType type;
   uint32_t id;
   uint32_t nodeOffset;
 };
 
-struct LGB_GROUP_SUBENTRY2_NODEPTR
+struct SGB_GROUP_SUBENTRY2_NODEPTR
 {
    uint32_t id;
    uint32_t unknown;
@@ -179,9 +184,35 @@ struct StringStruct
    string str;
 };
 
-void FindGroupEntries(LGB_GROUP_HEADER& group)
+struct SGB_STATE_ENTRY
 {
-    Printf("group = %d, entries = %d\n", group.id, group.entryCount);
+    
+};
+
+struct SGB_OFFSET1C_HEADER
+{
+   LgbEntryType Type;
+   int NameOffset;
+   uint Unknown08;
+
+   int EntryCount;
+   uint Unknown14;
+   int ModelFileOffset;
+   vec3 UnknownFloat3;
+   vec3 UnknownFloat3_2;
+   int StateOffset;
+   int ModelFileOffset2;
+   uint Unknown3;
+   float Unknown4;
+   int NameOffset2;
+   vec3 UnknownFloat3_3;
+};
+
+
+
+void FindGroupEntries(SGB_GROUP_HEADER& group)
+{
+    Printf("group = %d, entries = %d\n", group.unknown08, group.entryCount);
 
     local int baseOffset = FTell();
 
@@ -191,53 +222,15 @@ void FindGroupEntries(LGB_GROUP_HEADER& group)
     local int type;
     
     local int ptrVal;
-    if (group.obsetGroupOffset - group.unknown3 != 12)
-        Printf("potential funky obset group: %x\n", baseOffset - sizeof(group));
-    FSeek(baseOffset + group.obsetGroupOffset - sizeof(LGB_GROUP_HEADER));
-    // probably make string reading a func
-    for (i = 0; i < group.obsetGroupEntryCount; ++i)
-    {
-        LGB_OBSET_ENTRY obsetEntry<bgcolor=0xaaccaa>;
-        curPos = FTell();
-        FSeek(curPos + obsetEntry.nameOffset - sizeof(LGB_OBSET_ENTRY));
-        StringStruct obsetEntryName;
-        FSeek(curPos);
-    }
-    FSeek(baseOffset + group.unknownGroupOffset - sizeof(LGB_GROUP_HEADER));
-    for (i = 0; i < group.unknownGroupEntryCount; ++i)
-    {
-        LGB_GROUP_SUBENTRY2 subEntry <bgcolor=0xafafaf>;
-        // reset to this pos after
-        curPos = FTell();
-
-        if (curPos + subEntry.nodeOffset >= fileHdr.fileSize || subEntry.nodeOffset == 0)
-        {
-           FSeek(curPos);
-           continue;
-        }
-        FSeek(curPos + subEntry.nodeOffset - sizeof(LGB_GROUP_SUBENTRY2));
-
-        // TODO: there is some way to determine whether this is a pointer, or a node id
-        // probably just check if the id is within gimmick id ranges
-        
-        //ptrVal = ReadInt();
-        //if (ptrVal < subEntry.id)
-        //   break;
-        //FSeek(FTell()-4);
-        //if ((int16)group.unknown3 < 0)
-        //    uint32 lgbEntryHeaderUnknown; // same id as an LGB_ENTRY.header.unknown
-        //else
-        //    uint32 lgbEntryHeaderUnknown8;
-
-        FSeek(curPos);
-    }
+    
     for(i = 0; i < group.entryCount; i++)
     {
         curPos = baseOffset + (i * 4);
+        Printf("currPos = %x\n", curPos);
         FSeek(curPos);
         entryOffset = baseOffset + ReadInt();
 
-        //Printf("entry = %d, offset = %x\n", i, entryOffset);
+        Printf("entry = %d, offset = %x\n", i, entryOffset);
         
         FSeek(entryOffset);
 
@@ -245,19 +238,24 @@ void FindGroupEntries(LGB_GROUP_HEADER& group)
 
         if(type == 1)
         {
-            LGB_BGPARTS_HEADER bgEntry <bgcolor=0x777700>;
+            SGB_BGPARTS_HEADER bgEntry <bgcolor=0x777700>;
             //if (entry.lgbHeader.unknown != 0)
             //    Printf("type = %d entry = %d, offset = %x id = %d\n", type, i, entryOffset, entry.lgbHeader.unknown);
         }
         else if(type == 6)
         {
-            LGB_GIMMICK_HEADER entry <bgcolor=0x00ff00>;
+            SGB_GIMMICK_HEADER entry <bgcolor=0x00ff00>;
             //if (entry.lgbHeader.unknown != 0)
             //    Printf("type = %d entry = %d, offset = %x id = %d\n", type, i, entryOffset, entry.lgbHeader.unknown);
         }
+        else if (type == 256)
+        {
+            Printf("FUCK\n");
+            //SGB_GR
+        }
         else
         {
-            LGB_ENTRY_HEADER entry <bgcolor=0x0000ff>;
+            SGB_ENTRY_HEADER entry <bgcolor=0x0000ff>;
             //if (entry.unknown != 0)
             //    Printf("type = %d entry = %d, offset = %x id = %d\n", type, i, entryOffset, entry.unknown);
         }
@@ -273,7 +271,7 @@ void FindGroups()
     local int baseOffset = FTell();
     local int curPos = baseOffset;
 
-    for(i = 0; i < rootNode.entryCount; i++)
+    for(i = 0; i < rootEntry.groupCount; i++)
     {
         curPos = baseOffset + (i * 4);
         FSeek(curPos);
@@ -283,13 +281,14 @@ void FindGroups()
     
         FSeek(groupOffset);
     
-        LGB_GROUP_HEADER group <bgcolor=0x00aaff>;
+        SGB_GROUP_HEADER group <bgcolor=0x00aaff>;
 
         FindGroupEntries(group);
-    
+        
         FSeek(curPos);
     }
 }
 
+//FindGroups();
+FSeek(sizeof(SE_COMMON_FILE_HEADER));
 FindGroups();
-
